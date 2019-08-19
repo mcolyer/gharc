@@ -7,15 +7,30 @@ REVIEW=`git log --format="%(trailers:valueonly,key=Review)" -1`
 CURRENT_HEAD=`git rev-parse HEAD`
 CURRENT_BRANCH=`git rev-parse --abbrev-ref HEAD`
 GH_LOGIN=`hub api /user | jq .login -r` #TODO: This needs cached.
+GHARC_CONFIG=`git rev-parse --show-toplevel`/.git/gharc.json
+
+if [[ -f $GHARC_CONFIG ]]; then
+  REVIEW_ID=`cat $GHARC_CONFIG | jq .id`
+  REVIEW_ID=$((REVIEW_ID+1))
+else
+  REVIEW_ID=1
+  echo "{\"id\": $REVIEW_ID}" > $GHARC_CONFIG
+fi
 
 if [[ -z $REVIEW ]]; then
   # There is no existing review ...
-  REVIEW="D1-$CURRENT_BRANCH" #TODO: This should not be hard coded
+  REVIEW="D$REVIEW_ID-$CURRENT_BRANCH"
   GIT_EDITOR="git interpret-trailers --trailer \"Review: $REVIEW\" --in-place" git commit --amend
 
   git branch gharc/$REVIEW $CURRENT_HEAD
   git push -u origin gharc/$REVIEW:$GH_LOGIN/$REVIEW
-  hub pull-request -b master -h $GH_LOGIN/$REVIEW
+
+  DEPENDENT_BRANCH=`git log --format="%(trailers:valueonly,key=Review)" -1 HEAD^`
+  if [[ -z $DEPENDENT_BRANCH ]]; then
+    hub pull-request -b master -h $GH_LOGIN/$REVIEW -m "[$REVIEW] $CURRENT_BRANCH"
+  else
+    hub pull-request -b $GH_LOGIN/$DEPENDENT_BRANCH -h $GH_LOGIN/$REVIEW -m "[$REVIEW] $CURRENT_BRANCH"
+  fi
 else
   # There is an existing review ...
 
