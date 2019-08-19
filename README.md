@@ -75,7 +75,7 @@ gharc-diff HEAD
 git rebase --continue
 ```
 
-When I call `gharc-diff` it:
+TODO: When I call `gharc-diff` it:
 
 1. Looks for a git trailer, finds `D1-newfeature`.
 1. Saves the current `HEAD` to `$CURRENT_HEAD`
