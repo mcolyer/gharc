@@ -1,0 +1,28 @@
+#!/bin/sh
+
+set -x
+set -e
+
+REVIEW=`git log --format="%(trailers:valueonly,key=Review)" -1`
+CURRENT_HEAD=`git rev-parse HEAD`
+CURRENT_BRANCH=`git rev-parse --abbrev-ref HEAD`
+GH_LOGIN=`hub api /user | jq .login -r` #TODO: This needs cached.
+
+if [[ -z $REVIEW ]]; then
+  # There is no existing review ...
+  REVIEW="D1-$CURRENT_BRANCH"
+  GIT_EDITOR="git interpret-trailers --trailer \"Review: $REVIEW\" --in-place" git commit --amend
+
+  git branch gharc/$REVIEW $CURRENT_HEAD
+  git push -u origin gharc/$REVIEW:$GH_LOGIN/$REVIEW
+  hub pull-request -b master -h $GH_LOGIN/$REVIEW
+else
+  # There is an existing review ...
+
+  git checkout gharc/$REVIEW
+  git diff $CURRENT_HEAD | git apply -R
+  git commit -am "Additional change"
+  git push origin gharch/$REVIEW:$GH_LOGIN/$REVIEW
+fi
+
+git checkout $CURRENT_BRANCH
