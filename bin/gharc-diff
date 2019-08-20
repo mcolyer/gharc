@@ -11,7 +11,6 @@ GHARC_CONFIG=`git rev-parse --show-toplevel`/.git/gharc.json
 
 if [[ -f $GHARC_CONFIG ]]; then
   REVIEW_ID=`cat $GHARC_CONFIG | jq .id`
-  REVIEW_ID=$((REVIEW_ID+1))
 else
   REVIEW_ID=1
   echo "{\"id\": $REVIEW_ID}" > $GHARC_CONFIG
@@ -19,6 +18,9 @@ fi
 
 if [[ -z $REVIEW ]]; then
   # There is no existing review ...
+  REVIEW_ID=$((REVIEW_ID+1))
+  echo "{\"id\": $REVIEW_ID}" > $GHARC_CONFIG
+
   REVIEW="D$REVIEW_ID-$CURRENT_BRANCH"
   GIT_EDITOR="git interpret-trailers --trailer \"Review: $REVIEW\" --in-place" git commit --amend
 
@@ -37,7 +39,7 @@ else
   git checkout gharc/$REVIEW
   git diff $CURRENT_HEAD | git apply -R
   git commit -am "Additional change"
-  git push origin gharch/$REVIEW:$GH_LOGIN/$REVIEW
+  git push origin gharc/$REVIEW:$GH_LOGIN/$REVIEW
 fi
 
 git checkout $CURRENT_BRANCH
